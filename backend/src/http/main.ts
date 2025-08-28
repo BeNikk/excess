@@ -1,17 +1,10 @@
-import express, { type Request, type Response } from 'express';
-import { Client } from 'pg';
+import express, { type Request, type Response } from "express";
+import { client } from "../lib/pg";
 const app = express();
 
-
-const client = new Client({
-  host: "localhost",
-  port: 5433,
-  user: "postgres",
-  password: "password",
-  database: "postgres",
-});
 app.use(express.json());
-client.connect()
+client
+  .connect()
   .then(() => console.log("Connected to TimescaleDB"))
   .catch((err) => console.error("DB connection error:", err));
 
@@ -42,6 +35,6 @@ app.get("/candles", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-app.listen(3000,()=>{
-    console.log("Server running on port 3000");
-})
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});

@@ -1,15 +1,8 @@
 // fetching from binance stream and publishing it to websocket server.
 import { createClient } from "redis";
-import { Client } from "pg";
+import { client } from "../lib/pg";
 async function main() {
   try {
-    const client = new Client({
-      host: "localhost",
-      port: 5433,
-      user: "postgres",
-      password: "password",
-      database: "postgres",
-    });
     await client.connect();
     console.log("Connected to TimescaleDB!");
     const publisher = createClient();
