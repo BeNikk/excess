@@ -22,8 +22,8 @@ async function main() {
     binanceStream.onmessage = async (data) => {
       const dataReceived = JSON.parse(data.data).data;
       console.log(dataReceived);
-      const buy = Number(dataReceived.p) + Number(0.05 * dataReceived.p);
-      const sell = Number(dataReceived.p) - Number(0.05 * dataReceived.p);
+      const buy = Number(dataReceived.p) + Number(0.01 * dataReceived.p);
+      const sell = Number(dataReceived.p) - Number(0.01 * dataReceived.p);
       const symbol = dataReceived.s;
       const time = dataReceived.T;
       const volume = dataReceived.q;

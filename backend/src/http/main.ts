@@ -8,31 +8,33 @@ subscribers.connect();
 console.log("subscriber connected");
 app.use(express.json());
 
-let buyPriceBTC:number;
-let sellPriceBTC:number;
-subscribers.subscribe("price", (data) => {
+let buyPriceBTC:number = 0;
+let sellPriceBTC:number = 0;
+subscribers.subscribe("price", (data:any) => {
   const price = JSON.parse(data);
-  buyPriceBTC = price.buy;
-  sellPriceBTC = price.sell;
-  OPEN_ORDERS.forEach((order:any) => {
-    const currentPriceOfMyAsset = sellPriceBTC*order.quantity;
-    const entryPriceOfMyAsset = order.entryPrice*order.quantity;
-    const profitOrLoss = currentPriceOfMyAsset - entryPriceOfMyAsset;
-    if(profitOrLoss < -0.9*order.margin){
-      closeOrder(order.orderId);
-      const userId = order.userId;
-      const user = USERS_ARRAY.find(u=>u.userId == userId);
-      if(user){
-        user.balances.locked -= order.locked;
+  if(price.symbol == "BTCUSDT"){
+    buyPriceBTC = price.buy;
+    sellPriceBTC = price.sell;
+    OPEN_ORDERS.forEach((order:any) => {
+      const currentPriceOfMyAsset = sellPriceBTC*order.quantity;
+      const entryPriceOfMyAsset = order.entryPrice*order.quantity;
+      const profitOrLoss = currentPriceOfMyAsset - entryPriceOfMyAsset;
+      if(profitOrLoss < -0.9*order.locked){
+        closeOrder(order.orderId);
+        const userId = order.userId;
+        const user = USERS_ARRAY.find(u=>u.userId == userId);
+        if(user){
+          user.balances.locked -= order.locked;
+        }
       }
-
-    }
-  });
+    });
+  }
 });
 function closeOrder(orderId:string){
   //remove from open orders array
   let newArray = OPEN_ORDERS.filter((obj:any) => obj.orderId !== orderId);
   OPEN_ORDERS = newArray;
+  console.log("order closed");
   console.log(OPEN_ORDERS);
 }
 client
@@ -93,6 +95,7 @@ app.post("/buy",(req:Request,res:Response)=>{
   }
   user.balances.locked += lockedPrice;
   user.balances.usd -= lockedPrice;
+  console.log(priceOfSymbol);
 
   OPEN_ORDERS.push({
     orderId:randomUUIDv7(),
@@ -132,6 +135,7 @@ app.post("/sell",(req:Request,res:Response)=>{
     const quantityOfAssetOwned = orderDetails.quantity;
     const profitOrLoss = (sellPrice-entryPriceOfAsset)*quantityOfAssetOwned;
     user.balances.locked -= orderDetails.locked;
+    console.log("Profit or loss",profitOrLoss);
     user.balances.usd += orderDetails.locked + profitOrLoss;
     closeOrder(orderDetails.orderId);
     res.json({message:"Trade successfuly happened", userBalance:user.balances});
