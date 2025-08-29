@@ -4,6 +4,7 @@ import { client } from "../lib/pg";
 async function main() {
   try {
     await client.connect();
+    let buffer = [];
     console.log("Connected to TimescaleDB!");
     const publisher = createClient();
     publisher.connect();
@@ -16,16 +17,18 @@ async function main() {
     );
     binanceStream.onopen = () => {
       console.log("Connected to binance stream");
+
     };
     binanceStream.onmessage = async (data) => {
       const dataReceived = JSON.parse(data.data).data;
       console.log(dataReceived);
-      const buy = dataReceived.p + 0.05 * dataReceived.p;
-      const sell = dataReceived.p - 0.05 * dataReceived.p;
+      const buy = Number(dataReceived.p) + Number(0.05 * dataReceived.p);
+      const sell = Number(dataReceived.p) - Number(0.05 * dataReceived.p);
       const symbol = dataReceived.s;
       const time = dataReceived.T;
       const volume = dataReceived.q;
       const price = dataReceived.p;
+      buffer.push({time, symbol, price, volume});
       publisher.publish("price", JSON.stringify({ buy, sell, symbol, time }));
       try {
         await client.query(
