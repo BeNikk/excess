@@ -15,8 +15,10 @@ subscribers.subscribe("price", (data) => {
   buyPriceBTC = price.buy;
   sellPriceBTC = price.sell;
   OPEN_ORDERS.forEach((order:any) => {
-    const loss = sellPriceBTC*(order.quantity) - (order.bought_price);
-    if(loss>0.9*order.margin){
+    const currentPriceOfMyAsset = sellPriceBTC*order.quantity;
+    const entryPriceOfMyAsset = order.entryPrice*order.quantity;
+    const profitOrLoss = currentPriceOfMyAsset - entryPriceOfMyAsset;
+    if(profitOrLoss < -0.9*order.margin){
       closeOrder(order.orderId);
     }
   });
@@ -26,7 +28,6 @@ function closeOrder(orderId:string){
   let newArray = OPEN_ORDERS.filter((obj:any) => obj.orderId !== orderId);
   OPEN_ORDERS = newArray;
   console.log(OPEN_ORDERS);
-
 }
 client
   .connect()
@@ -72,13 +73,12 @@ const USERS_ARRAY = [{
 let OPEN_ORDERS:any = [];
 
 app.post("/buy",(req:Request,res:Response)=>{
-  const { userId, symbol, quantity, leverage, margin } = req.body;
+  const { userId, symbol, leverage, margin } = req.body;
   let user = USERS_ARRAY.find((u)=>u.userId == userId);
   if(!user){
     res.json({message:"User not found"});
     return;
   }
-  const accountBalance = user.balances.usd;
   let priceOfSymbol = buyPriceBTC;
   const lockedPrice = margin;
   if(user.balances.usd<=margin){
@@ -86,11 +86,6 @@ app.post("/buy",(req:Request,res:Response)=>{
   }
   user.balances.locked += lockedPrice;
   user.balances.usd -= lockedPrice;
-
-  const actualPriceOfAssetBought = margin*leverage;
-  console.log("btcprice",priceOfSymbol);
-  console.log("margin",margin);
-  console.log("leverage",leverage);
 
   OPEN_ORDERS.push({
     orderId:randomUUIDv7(),
@@ -100,13 +95,15 @@ app.post("/buy",(req:Request,res:Response)=>{
     locked:margin,
     leverage,
     quantity:margin*leverage/Number(priceOfSymbol),
-    bought_price : actualPriceOfAssetBought
+    entryPrice:priceOfSymbol
 
   })
   console.log(OPEN_ORDERS);
   return res.json({accountBalance: user.balances});
-
 });
+app.post("/sell",(req:Request,res:Response)=>{
+  
+})
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
