@@ -20,6 +20,12 @@ subscribers.subscribe("price", (data) => {
     const profitOrLoss = currentPriceOfMyAsset - entryPriceOfMyAsset;
     if(profitOrLoss < -0.9*order.margin){
       closeOrder(order.orderId);
+      const userId = order.userId;
+      const user = USERS_ARRAY.find(u=>u.userId == userId);
+      if(user){
+        user.balances.locked -= order.locked;
+      }
+
     }
   });
 });
@@ -83,6 +89,7 @@ app.post("/buy",(req:Request,res:Response)=>{
   const lockedPrice = margin;
   if(user.balances.usd<=margin){
     res.json({message:"Not enough balance"});
+    return;
   }
   user.balances.locked += lockedPrice;
   user.balances.usd -= lockedPrice;
@@ -102,7 +109,39 @@ app.post("/buy",(req:Request,res:Response)=>{
   return res.json({accountBalance: user.balances});
 });
 app.post("/sell",(req:Request,res:Response)=>{
-  
+  const { orderId, userId } = req.body;
+  const user = USERS_ARRAY.find((u)=>u.userId == userId);
+  if(!user){
+    res.json({message:"User not found"});
+    return;
+  }
+  const orderDetails = OPEN_ORDERS.find((order:any)=>order.orderId ==orderId);
+  if(!orderDetails){
+    res.json({message:"No order found"});
+    return;
+  }
+  if(orderDetails.userId != userId){
+    res.json({message:"not your order"});
+    return;
+  }
+  const sellPrice = sellPriceBTC;
+  //now we have sell Price 
+  console.log(sellPrice);
+  if(orderDetails.type == "buy"){
+    const entryPriceOfAsset = orderDetails.entryPrice;
+    const quantityOfAssetOwned = orderDetails.quantity;
+    const profitOrLoss = (sellPrice-entryPriceOfAsset)*quantityOfAssetOwned;
+    user.balances.locked -= orderDetails.locked;
+    user.balances.usd += orderDetails.locked + profitOrLoss;
+    closeOrder(orderDetails.orderId);
+    res.json({message:"Trade successfuly happened", userBalance:user.balances});
+    return;
+
+  }
+  else{
+    res.json({message:"You have not bought the asset"})
+    return;
+  }
 })
 app.listen(3000, () => {
   console.log("Server running on port 3000");
